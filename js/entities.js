@@ -282,13 +282,16 @@ class Unit {
             }
         }
 
-        // 自动索敌：移动中也扫描附近敌人（发现即切换为攻击）
+        // 自动索敌：玩家仅空闲时索敌，AI 移动中也索敌（更具攻击性）
         if (!this.attackTarget && this.cfg.damage > 0) {
-            const nearest = game.findNearestEnemy(this, this.attackRange * TILE_SIZE * 1.5);
-            if (nearest) {
-                this.attackTarget = nearest;
-                this.targetX = null;
-                this.targetY = null;
+            const shouldScan = this.isPlayer ? (this.targetX === null) : true;
+            if (shouldScan) {
+                const nearest = game.findNearestEnemy(this, this.attackRange * TILE_SIZE * 1.5);
+                if (nearest) {
+                    this.attackTarget = nearest;
+                    this.targetX = null;
+                    this.targetY = null;
+                }
             }
         }
     }

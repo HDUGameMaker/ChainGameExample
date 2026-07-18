@@ -491,8 +491,9 @@ class Game {
         // 敌方 AI
         this.aiTimer = 0;
         this.aiProdCooldown = 8;   // 每 8 秒尝试生产一辆坦克
-        this.aiCredits = 5000;     // AI 独立资金
+        this.aiCredits = 3000;     // AI 独立资金（开局只够电厂）
         this.aiIncomeRate = 200;   // AI 每秒收入
+        this.aiBuildPhase = 'power_plant'; // 'power_plant' | 'war_factory' | 'producing'
     }
 
     init() {
@@ -501,15 +502,8 @@ class Game {
         // 放置玩家建造场（地图左中部）
         this._placeBuilding('construction_yard', 6, 14, 'player');
 
-        // 放置敌方建造场（地图右中部）
+        // 敌方仅放置建造场，由 AI 自行发展
         this._placeBuilding('construction_yard', 38, 14, 'enemy');
-
-        // 放置敌方发电厂和战车工厂作为初始目标
-        this._placeBuilding('power_plant', 36, 18, 'enemy', true);
-        this._placeBuilding('ore_refinery', 36, 10, 'enemy', true);
-        this._placeBuilding('war_factory', 31, 10, 'enemy', true);
-
-        // 敌方也从零开始，由 AI 自行生产
 
         // 摄像机居中玩家基地
         const cy = this.buildings.find(b => b.typeId === 'construction_yard' && b.isPlayer);
@@ -563,10 +557,9 @@ class Game {
     }
 
     /** 检查建造位置是否在已有己方建筑的建造范围内 */
-    isInBuildRange(col, row, w, h) {
-        // 建造场本身不受范围限制（初始基地）
+    isInBuildRange(col, row, w, h, owner = 'player') {
         for (const b of this.buildings) {
-            if (b.owner !== 'player' || !b.isComplete) continue;
+            if (b.owner !== owner || !b.isComplete) continue;
             // 计算建筑边缘之间的最短距离
             const bx1 = b.col;
             const by1 = b.row;
@@ -793,30 +786,62 @@ class Game {
         }
     }
 
-    /** 敌方 AI：持续生产坦克 + 定期进攻 */
+    /** 敌方 AI：自主建造 + 持续生产坦克 + 定期进攻 */
     _updateAI(dt) {
         // AI 持续收入
         this.aiCredits += this.aiIncomeRate * dt;
 
-        const enemyWF = this.buildings.find(
-            b => b.typeId === 'war_factory' && b.owner === 'enemy' && b.isComplete && b.hp > 0
+        const enemyCY = this.buildings.find(
+            b => b.typeId === 'construction_yard' && b.owner === 'enemy' && b.isComplete && b.hp > 0
         );
-        if (!enemyWF) return;
+        if (!enemyCY) return;
 
-        // 定时生产坦克（队列最多 3 辆）
-        this.aiTimer += dt;
-        if (this.aiTimer >= this.aiProdCooldown) {
-            this.aiTimer = 0;
-            if (enemyWF.productionQueue.length < 3) {
-                const tankCfg = UNITS['tank'];
-                if (this.aiCredits >= tankCfg.cost) {
-                    this.aiCredits -= tankCfg.cost;
-                    enemyWF.queueUnit('tank');
+        // ── 建造阶段：从零开始发展 ──
+        if (this.aiBuildPhase === 'power_plant') {
+            const cfg = BUILDINGS['power_plant'];
+            if (this.aiCredits >= cfg.cost) {
+                const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
+                if (loc) {
+                    this.aiCredits -= cfg.cost;
+                    const pp = this._placeBuilding('power_plant', loc.col, loc.row, 'enemy');
+                    pp.buildProgress = 1;
+                    pp.isBuilding = false;
+                    this.aiBuildPhase = 'war_factory';
+                }
+            }
+        } else if (this.aiBuildPhase === 'war_factory') {
+            const cfg = BUILDINGS['war_factory'];
+            if (this.aiCredits >= cfg.cost) {
+                const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
+                if (loc) {
+                    this.aiCredits -= cfg.cost;
+                    const wf = this._placeBuilding('war_factory', loc.col, loc.row, 'enemy');
+                    wf.buildProgress = 1;
+                    wf.isBuilding = false;
+                    this.aiBuildPhase = 'producing';
                 }
             }
         }
 
-        // 命令空闲敌方坦克向玩家基地进攻
+        // ── 生产阶段：战车工厂造好后开始产坦克 ──
+        const enemyWF = this.buildings.find(
+            b => b.typeId === 'war_factory' && b.owner === 'enemy' && b.isComplete && b.hp > 0
+        );
+        if (enemyWF) {
+            this.aiTimer += dt;
+            if (this.aiTimer >= this.aiProdCooldown) {
+                this.aiTimer = 0;
+                if (enemyWF.productionQueue.length < 3) {
+                    const tankCfg = UNITS['tank'];
+                    if (this.aiCredits >= tankCfg.cost) {
+                        this.aiCredits -= tankCfg.cost;
+                        enemyWF.queueUnit('tank');
+                    }
+                }
+            }
+        }
+
+        // ── 进攻指令：空闲坦克向玩家基地推进 ──
         const playerCY = this.buildings.find(
             b => b.typeId === 'construction_yard' && b.owner === 'player' && b.hp > 0
         );
@@ -825,15 +850,30 @@ class Game {
             for (const unit of this.units) {
                 if (unit.owner !== 'enemy' || unit.hp <= 0) continue;
                 if (unit.typeId !== 'tank') continue;
-                // 没有攻击目标且没有移动目标的坦克 → 进攻玩家基地
                 if (!unit.attackTarget && unit.targetX === null) {
-                    // 随机散布进攻方向
                     const spreadX = (Math.random() - 0.5) * TILE_SIZE * 10;
                     const spreadY = (Math.random() - 0.5) * TILE_SIZE * 10;
                     unit.commandMove(target.x + spreadX, target.y + spreadY);
                 }
             }
         }
+    }
+
+    /** 在目标建筑周围螺旋搜索空地（供 AI 建造用） */
+    _findAIBuildSpot(baseBuilding, w, h) {
+        for (let dist = 2; dist <= 10; dist++) {
+            for (let dc = -dist; dc <= dist; dc++) {
+                for (let dr = -dist; dr <= dist; dr++) {
+                    const col = baseBuilding.col + dc;
+                    const row = baseBuilding.row + dr;
+                    if (this.map.isBuildable(col, row, w, h) &&
+                        this.isInBuildRange(col, row, w, h, 'enemy')) {
+                        return { col, row };
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     render() {
