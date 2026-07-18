@@ -1,6 +1,7 @@
 # ☭ 红色警戒2 网页版 (RA2 Web)
 
 > 接龙开发示例项目 — 纯 HTML/CSS/JavaScript，零依赖，浏览器直接运行。
+我来试一试
 
 ![tech](https://img.shields.io/badge/tech-Vanilla_JS_+_Canvas-yellow)
 ![deps](https://img.shields.io/badge/dependencies-0-green)
