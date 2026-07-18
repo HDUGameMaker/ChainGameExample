@@ -210,10 +210,11 @@ class UIManager {
                     <div class="info-stat">⛏️ 状态: ${this._miningStateLabel(unit.miningState)}</div>
                     <div class="info-stat">💎 载货: ${unit.cargo} / ${cfg.cargoCapacity}</div>
                     <div class="info-stat">🏠 精炼厂: ${unit.homeRefinery ? '已绑定' : '搜索中'}</div>`;
-            } else if (unit.isTank) {
+            } else if (unit.cfg.damage > 0) {
                 extraHTML = `
                     <div class="info-stat">💥 伤害: ${cfg.damage}</div>
                     <div class="info-stat">🎯 射程: ${cfg.attackRange} 格</div>
+                    ${cfg.autoAttackRange ? `<div class="info-stat">👁️ 自动索敌: ${cfg.autoAttackRange} 格</div>` : ''}
                     ${unit.attackTarget ? '<div class="info-stat">⚔️ 攻击中...</div>' : ''}`;
             }
 
