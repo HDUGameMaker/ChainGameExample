@@ -796,29 +796,42 @@ class Game {
         );
         if (!enemyCY) return;
 
-        // ── 建造阶段：从零开始发展 ──
+        // ── 建造阶段：从零开始发展（完整建造动画）──
         if (this.aiBuildPhase === 'power_plant') {
-            const cfg = BUILDINGS['power_plant'];
-            if (this.aiCredits >= cfg.cost) {
-                const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
-                if (loc) {
-                    this.aiCredits -= cfg.cost;
-                    const pp = this._placeBuilding('power_plant', loc.col, loc.row, 'enemy');
-                    pp.buildProgress = 1;
-                    pp.isBuilding = false;
-                    this.aiBuildPhase = 'war_factory';
+            const existing = this.buildings.find(
+                b => b.typeId === 'power_plant' && b.owner === 'enemy'
+            );
+            if (existing && existing.isComplete) {
+                // 电厂已完成 → 下一阶段
+                this.aiBuildPhase = 'war_factory';
+            } else if (!existing) {
+                // 还没造电厂 → 尝试放置
+                const cfg = BUILDINGS['power_plant'];
+                if (this.aiCredits >= cfg.cost) {
+                    const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
+                    if (loc) {
+                        this.aiCredits -= cfg.cost;
+                        this._placeBuilding('power_plant', loc.col, loc.row, 'enemy');
+                        // 不设 buildProgress=1，让它经历建造过程
+                    }
                 }
             }
+            // else: existing && isBuilding → 等待施工完成
         } else if (this.aiBuildPhase === 'war_factory') {
-            const cfg = BUILDINGS['war_factory'];
-            if (this.aiCredits >= cfg.cost) {
-                const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
-                if (loc) {
-                    this.aiCredits -= cfg.cost;
-                    const wf = this._placeBuilding('war_factory', loc.col, loc.row, 'enemy');
-                    wf.buildProgress = 1;
-                    wf.isBuilding = false;
-                    this.aiBuildPhase = 'producing';
+            const existing = this.buildings.find(
+                b => b.typeId === 'war_factory' && b.owner === 'enemy'
+            );
+            if (existing && existing.isComplete) {
+                // 重工已完成 → 开始产坦克
+                this.aiBuildPhase = 'producing';
+            } else if (!existing) {
+                const cfg = BUILDINGS['war_factory'];
+                if (this.aiCredits >= cfg.cost) {
+                    const loc = this._findAIBuildSpot(enemyCY, cfg.size[0], cfg.size[1]);
+                    if (loc) {
+                        this.aiCredits -= cfg.cost;
+                        this._placeBuilding('war_factory', loc.col, loc.row, 'enemy');
+                    }
                 }
             }
         }
