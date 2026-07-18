@@ -308,6 +308,27 @@ class Renderer {
             ctx.lineTo(w * 0.5, 0);
             ctx.stroke();
             ctx.restore();
+        } else if (unit.isHero) {
+            // 英雄：醒目的六角徽记 + 朝向目标的武器
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = Math.PI / 3 * i - Math.PI / 2;
+                const px = Math.cos(angle) * w * 0.42;
+                const py = Math.sin(angle) * h * 0.42;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.save();
+            ctx.rotate(unit.turretAngle);
+            ctx.strokeStyle = isPlayer ? cfg.colorDark : COLORS.enemyDark;
+            ctx.lineWidth = Math.min(w, h) * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(w * 0.48, 0);
+            ctx.stroke();
+            ctx.restore();
         } else if (unit.isHarvester) {
             // 矿车：大矩形 + 铲斗
             ctx.fillRect(-w * 0.4, -h * 0.4, w * 0.8, h * 0.8);
@@ -504,6 +525,15 @@ class Game {
 
         // 敌方仅放置建造场，由 AI 自行发展
         this._placeBuilding('construction_yard', 38, 14, 'enemy');
+
+        // 根据 config.js 配置生成开局单位（默认包含玩家英雄）
+        for (const start of STARTING_UNITS) {
+            const x = start.col * TILE_SIZE + TILE_SIZE / 2;
+            const y = start.row * TILE_SIZE + TILE_SIZE / 2;
+            if (!UNITS[start.typeId] || !this.map.isInBounds(start.col, start.row)) continue;
+            if (this.map.tiles[start.row][start.col].building || this.isUnitAt(x, y)) continue;
+            this.units.push(new Unit(start.typeId, x, y, start.owner));
+        }
 
         // 摄像机居中玩家基地
         const cy = this.buildings.find(b => b.typeId === 'construction_yard' && b.isPlayer);

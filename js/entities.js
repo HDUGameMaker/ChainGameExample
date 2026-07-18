@@ -172,6 +172,7 @@ class Unit {
     get isEnemy() { return this.owner === 'enemy'; }
     get isHarvester() { return this.typeId === 'harvester'; }
     get isTank() { return this.typeId === 'tank'; }
+    get isHero() { return this.typeId === 'hero'; }
 
     get speed() { return this.cfg.speed; }
     get size() { return this.cfg.size; }
@@ -248,6 +249,11 @@ class Unit {
     }
 
     _updateCombatUnit(dt, game) {
+        // 已被摧毁的目标不应阻止单位继续自动索敌。
+        if (this.attackTarget && this.attackTarget.hp <= 0) {
+            this.attackTarget = null;
+        }
+
         // 如果有攻击目标
         if (this.attackTarget && this.attackTarget.hp > 0) {
             const tx = this.attackTarget.x !== undefined ? this.attackTarget.x : this.attackTarget.col * TILE_SIZE;
@@ -286,7 +292,8 @@ class Unit {
         if (!this.attackTarget && this.cfg.damage > 0) {
             const shouldScan = this.isPlayer ? (this.targetX === null) : true;
             if (shouldScan) {
-                const nearest = game.findNearestEnemy(this, this.attackRange * TILE_SIZE * 1.5);
+                const autoAttackRange = this.cfg.autoAttackRange ?? this.attackRange * 1.5;
+                const nearest = game.findNearestEnemy(this, autoAttackRange * TILE_SIZE);
                 if (nearest) {
                     this.attackTarget = nearest;
                     this.targetX = null;

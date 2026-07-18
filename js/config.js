@@ -147,7 +147,32 @@ const UNITS = {
         colorDark:   '#335577',
         sightRange:  7,
     },
+    hero: {
+        id:          'hero',
+        name:        '守卫英雄',
+        desc:        '开局英雄，会自动攻击靠近的敌人',
+        cost:        0,          // 开局赠送，不可生产
+        hp:          600,
+        maxHp:       600,
+        speed:       190,
+        size:        [1.2, 1.2],
+        damage:      55,
+        attackRange: 1,          // 武器射程（格）
+        autoAttackRange: 8,      // 自动索敌半径（格）
+        attackCooldown: 900,     // 攻击间隔（毫秒）
+        buildTime:   0,
+        builtAt:     null,       // 不属于任何生产建筑
+        color:       '#42d9ff',
+        colorDark:   '#176f9a',
+        sightRange:  10,
+    },
 };
+
+// ── 开局单位 ──
+// col/row 为单位出生的地图格坐标；可继续在数组中添加其他开局单位。
+const STARTING_UNITS = [
+    { typeId: 'hero', owner: 'player', col: 10, row: 16 },
+];
 
 // ── 矿石 ──
 const ORE = {
