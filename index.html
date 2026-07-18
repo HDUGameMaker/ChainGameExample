@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红色警戒2 网页版 — 接龙开发示例</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 游戏画布 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 顶部资源栏 -->
+    <div id="top-bar">
+        <span class="game-title">☭ RED ALERT 2 WEB</span>
+        <span class="stat" id="credits">$5000</span>
+        <span class="stat" id="power">⚡ 0 / 0</span>
+    </div>
+
+    <!-- 右侧边栏 -->
+    <div id="sidebar">
+        <div id="sidebar-title">🏗️ 建筑建造</div>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <!-- 脚本加载顺序很重要：config → map → entities → engine → input → ui → main -->
+    <script src="js/config.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
